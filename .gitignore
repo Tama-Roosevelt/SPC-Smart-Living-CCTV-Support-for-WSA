@@ -1,0 +1,13 @@
+# Large files exceeding GitHub 100MB limit
+*.7z
+*.rar
+*.xapk
+WSA.7z
+SPC_Smart_Living_Full.xapk
+
+# Temporary files and logs
+*.tmp
+*.log
+*.bak
+.DS_Store
+Thumbs.db
