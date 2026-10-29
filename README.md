@@ -60,7 +60,9 @@ SPC-Smart-Living-CCTV-Support-for-WSA/
 ├── 📄 README.md                        # Dokumentasi & Pernyataan Legal
 ├── 📄 LICENSE                          # Lisensi MIT untuk skrip & panduan
 ├── 📄 .gitignore                       # Filter file berukuran besar (>100MB)
-├── 🚀 Pasang_ke_WSA.bat                # Skrip 1-klik instalasi multi-split via ADB
+├── ⚡ Setup_Otomatis.bat               # Skrip 1-klik Full Otomatis (VMP, WSA, Pacman, APK)
+├── 📜 Install_WSA_Otomatis.ps1         # Engine PowerShell automasi instalasi
+├── 🚀 Pasang_ke_WSA.bat                # Skrip instalasi multi-split APK via ADB
 │
 ├── 📁 xapk_splits/                     # Berkas biner split APK resmi
 │   ├── base.apk                        # Modul aplikasi utama
@@ -84,31 +86,35 @@ SPC-Smart-Living-CCTV-Support-for-WSA/
 
 ---
 
-## 🚀 Panduan Penggunaan
+## 🚀 Panduan Penggunaan di Komputer Baru
 
-### Langkah 1: Siapkan Mesin WSA
-Jika komputer Anda belum memiliki WSA:
-1. Unduh arsip WSA (misalnya build `WSA_2407.40000.4.0_x64` dari arsip komunitas terpercaya seperti [MustardChef/WSABuilds](https://github.com/MustardChef/WSABuilds)).
-2. Ekstrak ke folder tujuan (contoh: `C:\WSA`).
-3. Jalankan `Run.bat` (Run as Administrator) untuk mendaftarkan paket ke sistem Windows.
+### 🌟 METODE 1: Setup 1-Klik Otomatis (Paling Mudah)
+Cukup clone repositori ini di komputer tujuan:
+```bash
+git clone https://github.com/Tama-Roosevelt/SPC-Smart-Living-CCTV-Support-for-WSA.git
+```
+Lalu klik kanan pada **`Setup_Otomatis.bat`** dan pilih **"Run as Administrator"**.
+Skrip akan secara otomatis:
+1. Memeriksa dan mengaktifkan fitur Virtual Machine Platform Windows.
+2. Mengekstrak dan mendaftarkan paket WSA ke `C:\WSA`.
+3. Memasang WSA-Pacman secara silent.
+4. Menyalakan subsistem Android dan menghubungkan ADB (Port 58526).
+5. Memasang aplikasi SPC Smart Living lengkap (Multi-Split ARM64).
+6. Siap digunakan langsung dari Start Menu Windows!
 
-### Langkah 2: Aktifkan Mode Pengembang (Developer Mode)
+---
+
+### 🔧 METODE 2: Langkah Manual (Bagi yang Sudah Memiliki WSA)
+
+#### Langkah 1: Aktifkan Mode Pengembang (Developer Mode)
 1. Buka aplikasi **Pengaturan Subsistem Windows untuk Android (WSA Settings)**.
 2. Masuk ke menu **Developer** / **Tingkat Lanjut**.
 3. Pastikan tombol **Mode Pengembang (Developer Mode)** dalam status **AKTIF (ON)**.
-4. Catat alamat IP & Port ADB (default: `127.0.0.1:58526`).
 
-### Langkah 3: Pasang Aplikasi SPC Smart Living
-1. Clone repositori ini atau unduh berkas ZIP:
-   ```bash
-   git clone https://github.com/Tama-Roosevelt/SPC-Smart-Living-CCTV-Support-for-WSA.git
-   ```
-2. Buka folder repositori, lalu **klik ganda pada file `Pasang_ke_WSA.bat`**.
-3. Skrip akan secara otomatis:
-   - Menghubungkan ADB ke WSA (`127.0.0.1:58526`).
-   - Memasang keempat split APK sekaligus (`adb install-multiple`).
-4. Setelah muncul tulisan `[BERHASIL]`, buka **Start Menu Windows** dan cari **SPC Smart Living**.
-5. Aplikasi CCTV siap digunakan langsung di Windows!
+#### Langkah 2: Pasang Aplikasi SPC Smart Living
+1. Klik ganda pada file **`Pasang_ke_WSA.bat`**.
+2. Tunggu proses instalasi split APK selesai hingga muncul konfirmasi `[BERHASIL]`.
+3. Buka **Start Menu Windows** dan cari **SPC Smart Living**.
 
 ---
 
@@ -124,3 +130,4 @@ Jika komputer Anda belum memiliki WSA:
 
 Skrip instalasi dan dokumentasi panduan dalam repositori ini dilisensikan di bawah [Lisensi MIT](LICENSE).  
 Hak cipta perangkat lunak pihak ketiga (*SPC Smart Living, WSA, WSA-Pacman*) tetap menjadi milik masing-masing pemilik aslinya.
+
