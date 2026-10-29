@@ -8,7 +8,7 @@ param (
     [switch]$SkipDownload
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host "   OTOMATISASI INSTALASI WINDOWS SUBSYSTEM FOR ANDROID (WSA) & CCTV SPC" -ForegroundColor Cyan
@@ -24,32 +24,54 @@ if (-not $isAdmin) {
     exit
 }
 
-# 2. Periksa Fitur Virtual Machine Platform
-Write-Host "[1/6] Memeriksa Fitur Virtual Machine Platform (VMP)..." -ForegroundColor Green
+# 2. Aktifkan Mode Pengembang & Sideloading di Registry Windows (Mencegah HRESULT 0x80073CFF)
+Write-Host "[1/7] Mengonfigurasi Registry Sideloading & Mode Pengembang Windows..." -ForegroundColor Green
+try {
+    $regPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock",
+        "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Appx"
+    )
+    foreach ($p in $regPaths) {
+        if (-not (Test-Path $p)) { New-Item -Path $p -Force | Out-Null }
+        Set-ItemProperty -Path $p -Name "AllowDevelopmentWithoutDevLicense" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "AllowAllTrustedApps" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+    Write-Host "      [OK] Kebijakan Sideloading AppX diaktifkan." -ForegroundColor Green
+} catch {
+    Write-Host "      [WARNING] Gagal mengatur registry sideloading: $($_.Exception.Message)" -ForegroundColor DarkYellow
+}
+
+# 3. Periksa Fitur Virtual Machine Platform & Hypervisor
+Write-Host ""
+Write-Host "[2/7] Memeriksa Fitur Virtual Machine Platform (VMP) & Hypervisor..." -ForegroundColor Green
+$vmpChanged = $false
 try {
     $vmp = Get-WindowsOptionalFeature -Online -FeatureName "VirtualMachinePlatform" -ErrorAction SilentlyContinue
     if ($null -ne $vmp -and $vmp.State -ne "Enabled") {
         Write-Host "      Mengaktifkan Virtual Machine Platform..." -ForegroundColor Yellow
         Enable-WindowsOptionalFeature -Online -FeatureName "VirtualMachinePlatform" -All -NoRestart | Out-Null
+        $vmpChanged = $true
         Write-Host "      [OK] Virtual Machine Platform diaktifkan." -ForegroundColor Green
     } else {
         Write-Host "      [OK] Virtual Machine Platform sudah aktif." -ForegroundColor Green
     }
+    
+    # Konfigurasi bootloader hypervisor ke mode AUTO
+    & bcdedit /set hypervisorlaunchtype auto | Out-Null
+    Write-Host "      [OK] Bootloader Hypervisor disetel ke AUTO." -ForegroundColor Green
 } catch {
-    Write-Host "      [WARNING] Gagal memeriksa status VMP: $($_.Exception.Message)" -ForegroundColor DarkYellow
+    Write-Host "      [WARNING] Gagal mengonfigurasi VMP: $($_.Exception.Message)" -ForegroundColor DarkYellow
 }
 
-# 3. Periksa Pemasangan WSA (Windows Subsystem for Android)
+# 4. Periksa Pemasangan WSA (Windows Subsystem for Android)
 Write-Host ""
-Write-Host "[2/6] Memeriksa Windows Subsystem for Android (WSA)..." -ForegroundColor Green
+Write-Host "[3/7] Memeriksa Windows Subsystem for Android (WSA)..." -ForegroundColor Green
 $wsaPkg = Get-AppxPackage -Name "*WindowsSubsystemForAndroid*" -ErrorAction SilentlyContinue
-
 $wsaTargetDir = "C:\WSA"
 
 if ($null -eq $wsaPkg) {
     Write-Host "      WSA belum terpasang di sistem ini." -ForegroundColor Yellow
     
-    # Periksa apakah folder C:\WSA sudah ada isinya
     if (-not (Test-Path "$wsaTargetDir\AppxManifest.xml")) {
         Write-Host "      Mencari arsip WSA.7z lokal..." -ForegroundColor Cyan
         
@@ -68,49 +90,68 @@ if ($null -eq $wsaPkg) {
         }
         
         if ($null -eq $localWsaArchive -and -not $SkipDownload) {
-            Write-Host "      Mengunduh paket resmi WSA (WSA 2407 x64 Nightly NoGApps)..." -ForegroundColor Yellow
-            $wsaUrl = "https://github.com/MustardChef/WSABuilds/releases/download/Windows_11_2407.40000.4.0/WSA_2407.40000.4.0_x64_Release-Nightly-NoGApps-NoAmazon.7z"
+            Write-Host "      Mengunduh paket resmi WSA (WSA 2407 x64 Nightly LTS)..." -ForegroundColor Yellow
+            $wsaUrl = "https://github.com/MustardChef/WSABuilds/releases/download/Windows_11_2407.40000.4.0_LTS_8/WSA_2407.40000.4.0_x64_Release-Nightly-NoGApps-NoAmazon.7z"
             $localWsaArchive = "$PSScriptRoot\WSA.7z"
-            Write-Host "      Mengunduh dari: $wsaUrl" -ForegroundColor Gray
-            Invoke-WebRequest -Uri $wsaUrl -OutFile $localWsaArchive -UseBasicParsing
+            Write-Host "      URL: $wsaUrl" -ForegroundColor Gray
+            
+            # Gunakan curl.exe jika tersedia (lebih cepat dan handal)
+            $curlCmd = Get-Command curl.exe -ErrorAction SilentlyContinue
+            if ($null -ne $curlCmd) {
+                & curl.exe -L --retry 3 --connect-timeout 30 -o "$localWsaArchive" "$wsaUrl"
+            } else {
+                Invoke-WebRequest -Uri $wsaUrl -OutFile $localWsaArchive -UseBasicParsing
+            }
         }
 
         if (Test-Path $localWsaArchive) {
             Write-Host "      Mengekstrak WSA ke $wsaTargetDir..." -ForegroundColor Cyan
             New-Item -ItemType Directory -Force -Path $wsaTargetDir | Out-Null
             
-            # Gunakan 7-Zip jika tersedia, atau tar
             $sevenZip = "C:\Program Files\7-Zip\7z.exe"
             if (-not (Test-Path $sevenZip)) {
                 $sevenZip = (Get-Command 7z.exe -ErrorAction SilentlyContinue).Source
             }
-            if (Test-Path $sevenZip) {
+            if ($sevenZip -and (Test-Path $sevenZip)) {
                 & $sevenZip x "$localWsaArchive" "-o$wsaTargetDir" -y | Out-Null
             } else {
-                # Alternatif pakai tar
                 tar -xf "$localWsaArchive" -C "$wsaTargetDir"
             }
         } else {
-            Write-Host "      [ERROR] Arsip WSA tidak ditemukan dan tidak dapat diunduh." -ForegroundColor Red
-            Write-Host "      Silakan salin WSA.7z ke folder repositori atau unduh dari GitHub WSABuilds." -ForegroundColor Yellow
+            Write-Host "      [ERROR] Arsip WSA tidak ditemukan dan unduhan gagal." -ForegroundColor Red
+            Write-Host "      Silakan salin berkas WSA.7z ke folder repositori atau gunakan Perbaiki_VMP.bat." -ForegroundColor Yellow
             pause
             exit 1
         }
     }
     
+    # Salin seluruh runtime DLL ke subfolder WsaClient untuk mencegah error gfxstream_backend.dll
+    if (Test-Path "$wsaTargetDir\WsaClient") {
+        Write-Host "      Menyelaraskan runtime DLL ke folder WsaClient..." -ForegroundColor Cyan
+        Copy-Item -Path "$wsaTargetDir\*.dll" -Destination "$wsaTargetDir\WsaClient" -Force -ErrorAction SilentlyContinue
+    }
+
     # Daftarkan paket WSA
     if (Test-Path "$wsaTargetDir\AppxManifest.xml") {
-        Write-Host "      Mendaftarkan paket WSA ke Windows..." -ForegroundColor Cyan
-        Add-AppxPackage -ForceApplicationShutdown -Register "$wsaTargetDir\AppxManifest.xml"
-        Write-Host "      [OK] WSA berhasil didaftarkan!" -ForegroundColor Green
+        Write-Host "      Mendaftarkan paket WSA ke Windows (Add-AppxPackage)..." -ForegroundColor Cyan
+        try {
+            Add-AppxPackage -ForceApplicationShutdown -Register "$wsaTargetDir\AppxManifest.xml" -ErrorAction Stop
+            Write-Host "      [OK] WSA berhasil didaftarkan!" -ForegroundColor Green
+        } catch {
+            Write-Host "      [ERROR] Gagal mendaftarkan WSA: $($_.Exception.Message)" -ForegroundColor Red
+        }
     }
 } else {
     Write-Host "      [OK] WSA sudah terpasang: $($wsaPkg.PackageFullName)" -ForegroundColor Green
+    # Tetap pastikan DLL di WsaClient lengkap jika ada folder C:\WSA\WsaClient
+    if (Test-Path "$wsaTargetDir\WsaClient") {
+        Copy-Item -Path "$wsaTargetDir\*.dll" -Destination "$wsaTargetDir\WsaClient" -Force -ErrorAction SilentlyContinue
+    }
 }
 
-# 4. Pasang WSA-Pacman (Opsional / GUI Manager)
+# 5. Pasang WSA-Pacman (GUI Manager)
 Write-Host ""
-Write-Host "[3/6] Memeriksa WSA-Pacman..." -ForegroundColor Green
+Write-Host "[4/7] Memeriksa WSA-Pacman..." -ForegroundColor Green
 $pacmanInstaller = "$PSScriptRoot\WSA-pacman-v1.5.0-installer.exe"
 if (Test-Path $pacmanInstaller) {
     $pacmanInstalled = Test-Path "C:\Program Files\WSA-pacman\WSA-pacman.exe"
@@ -123,11 +164,10 @@ if (Test-Path $pacmanInstaller) {
     }
 }
 
-# 5. Bangunkan WSA dan Siapkan Koneksi ADB
+# 6. Bangunkan WSA dan Siapkan Koneksi ADB
 Write-Host ""
-Write-Host "[4/6] Membangunkan subsistem Android WSA..." -ForegroundColor Green
+Write-Host "[5/7] Membangunkan subsistem Android WSA & Memulai ADB..." -ForegroundColor Green
 
-# Cari tool ADB
 $adbPath = "$PSScriptRoot\WSA-Pacman\embedded-tools\adb.exe"
 if (-not (Test-Path $adbPath)) {
     $adbPath = "C:\Program Files\WSA-pacman\embedded-tools\adb.exe"
@@ -137,7 +177,11 @@ if (-not (Test-Path $adbPath)) {
     if ($null -ne $adbCmd) { $adbPath = $adbCmd.Source }
 }
 
-# Jalankan WsaClient untuk memicu startup
+# Jalankan adb start-server secara hening untuk mencegah NativeCommandError
+if (Test-Path $adbPath) {
+    & $adbPath start-server *>$null
+}
+
 try {
     Start-Process "wsa://com.android.settings" -ErrorAction SilentlyContinue
 } catch {}
@@ -159,13 +203,13 @@ for ($i = 1; $i -le 10; $i++) {
 
 if (-not $connected) {
     Write-Host ""
-    Write-Host "      [PERHATIAN] Belum bisa otomatis terhubung ke ADB." -ForegroundColor Yellow
-    Write-Host "      Pastikan Pengaturan WSA sudah dibuka, dan 'Developer Mode' diaktifkan (ON)." -ForegroundColor Yellow
+    Write-Host "      [CATATAN] Belum terhubung otomatis ke ADB." -ForegroundColor Yellow
+    Write-Host "      Buka jendela Pengaturan WSA, lalu aktifkan 'Developer Mode' (Mode Pengembang)." -ForegroundColor Yellow
 }
 
-# 6. Pasang Split APK SPC Smart Living
+# 7. Pasang Split APK SPC Smart Living
 Write-Host ""
-Write-Host "[5/6] Memasang Aplikasi SPC Smart Living (Multi-Split)..." -ForegroundColor Green
+Write-Host "[6/7] Memasang Aplikasi SPC Smart Living (Multi-Split)..." -ForegroundColor Green
 
 $splitsDir = "$PSScriptRoot\xapk_splits"
 $baseApk = "$splitsDir\base.apk"
@@ -192,12 +236,23 @@ if ((Test-Path $baseApk) -and (Test-Path $armApk)) {
     Write-Host "      [WARNING] Berkas split APK tidak lengkap di $splitsDir." -ForegroundColor Yellow
 }
 
-# 7. Selesai
+# 8. Ringkasan & Panduan Restart jika VMP baru diaktifkan
 Write-Host ""
-Write-Host "========================================================================" -ForegroundColor Cyan
-Write-Host " [SELESAI] Proses Setup Otomatis Telah Berakhir!" -ForegroundColor Green
-Write-Host " Anda dapat membuka 'SPC Smart Living' langsung dari Start Menu Windows." -ForegroundColor Cyan
-Write-Host "========================================================================" -ForegroundColor Cyan
+Write-Host "[7/7] Verifikasi Status Akhir..." -ForegroundColor Green
+if ($vmpChanged) {
+    Write-Host ""
+    Write-Host "========================================================================" -ForegroundColor Yellow
+    Write-Host " [PENTING] Fitur Virtual Machine Platform baru saja diaktifkan." -ForegroundColor Yellow
+    Write-Host " Anda SANGAT DISARANKAN untuk ME-RESTART KOMPUTER agar Hypervisor aktif" -ForegroundColor Yellow
+    Write-Host " secara penuh pada memori kernel Windows." -ForegroundColor Yellow
+    Write-Host " Setelah restart, buka 'SPC Smart Living' dari Start Menu." -ForegroundColor Yellow
+    Write-Host "========================================================================" -ForegroundColor Yellow
+} else {
+    Write-Host "========================================================================" -ForegroundColor Cyan
+    Write-Host " [SELESAI] Setup Otomatis Berhasil!" -ForegroundColor Green
+    Write-Host " Buka aplikasi 'SPC Smart Living' dari Start Menu Windows." -ForegroundColor Cyan
+    Write-Host "========================================================================" -ForegroundColor Cyan
+}
+
 Write-Host ""
 pause
-

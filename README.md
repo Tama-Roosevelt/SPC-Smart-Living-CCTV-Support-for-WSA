@@ -63,9 +63,10 @@ SPC-Smart-Living-CCTV-Support-for-WSA/
 ├── ⚡ Setup_Otomatis.bat               # Skrip 1-klik Full Otomatis (VMP, WSA, Pacman, APK)
 ├── 📜 Install_WSA_Otomatis.ps1         # Engine PowerShell automasi instalasi
 ├── 🚀 Pasang_ke_WSA.bat                # Skrip instalasi multi-split APK via ADB
+├── 🛠️ Perbaiki_VMP.bat                 # Solusi perbaikan DISM & Hypervisor VMP
 │
 ├── 📁 xapk_splits/                     # Berkas biner split APK resmi
-│   ├── base.apk                        # Modul aplikasi utama
+│   ├── com.spc.smartliving.apk         # Modul aplikasi utama (base)
 │   ├── config.arm64_v8a.apk            # Pustaka native CPU 64-bit
 │   ├── config.mdpi.apk                 # Aset grafis & ikon
 │   └── config.en.apk                   # Modul bahasa & antarmuka
@@ -115,6 +116,20 @@ Skrip akan secara otomatis:
 1. Klik ganda pada file **`Pasang_ke_WSA.bat`**.
 2. Tunggu proses instalasi split APK selesai hingga muncul konfirmasi `[BERHASIL]`.
 3. Buka **Start Menu Windows** dan cari **SPC Smart Living**.
+
+---
+
+## 🔧 Solusi Masalah Teknis & Penyesuaian PC Baru (Troubleshooting)
+
+Jika Anda menemui kendala saat instalasi di PC/laptop lain, berikut panduan solusinya:
+
+| Gejala / Pesan Error | Penyebab | Solusi Cepat |
+| :--- | :--- | :--- |
+| **`HRESULT 0x80073CFF`** *(Developer license / sideloading required)* | Windows memblokir pendaftaran paket AppX lepas (*unsigned/loose manifest*). | Jalankan `Setup_Otomatis.bat` (Run as Admin). Skrip otomatis mengaktifkan *Sideloading* dan *Developer Mode* di Registry Windows. |
+| **`WsaClient.exe - gfxstream_backend.dll was not found`** | File DLL grafis berada di `C:\WSA`, sedangkan `WsaClient.exe` mencari di dalam subfolder `WsaClient`. | Skrip `Install_WSA_Otomatis.ps1` telah diperbarui untuk menyalin seluruh runtime DLL ke `C:\WSA\WsaClient` secara otomatis. |
+| **Pop-up "Virtual Machine Platform is turned on for your PC"** / **`Error 14098`** | Metadata WinSxS korup atau kernel Hypervisor belum aktif pada memori Windows. | Klik kanan file **`Perbaiki_VMP.bat`** lalu pilih **"Run as Administrator"**. Tunggu hingga proses `DISM RestoreHealth` selesai 100%, lalu **Restart Komputer**. |
+| **`adb.exe : * daemon not running` / PowerShell berhenti** | ADB menulis pesan startup awal ke `stderr`, yang memicu *NativeCommandError* di PowerShell. | Skrip telah disesuaikan dengan `$ErrorActionPreference = "Continue"` dan menjalankan `adb start-server` secara hening di awal. |
+| **`'SPC' is not recognized as an internal or external command`** | Karakter `&` pada teks batch dibaca sebagai pemisah perintah oleh `cmd.exe`. | Seluruh karakter ampersand pada file batch telah di-escape menjadi `^&` atau diganti dengan kata `dan`. |
 
 ---
 

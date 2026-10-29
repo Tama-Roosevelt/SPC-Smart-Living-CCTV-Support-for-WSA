@@ -1,11 +1,11 @@
 @echo off
-title Setup Otomatis WSA & SPC Smart Living
+title Setup Otomatis WSA ^& SPC Smart Living
 echo ========================================================================
-echo     Menjalankan Setup Otomatis WSA & SPC Smart Living (Administrator)
+echo     Menjalankan Setup Otomatis WSA dan SPC Smart Living (Administrator)
+echo                     Author: Tama-Roosevelt
 echo ========================================================================
 echo.
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Install_WSA_Otomatis.ps1"
 
 pause
-

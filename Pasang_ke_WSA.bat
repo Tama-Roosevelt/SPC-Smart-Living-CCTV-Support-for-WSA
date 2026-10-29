@@ -15,6 +15,7 @@ if not exist %ADB% (
 )
 
 echo [1/3] Memeriksa status koneksi ke WSA (Port 58526)...
+%ADB% start-server >nul 2>&1
 %ADB% connect 127.0.0.1:58526
 
 echo.
@@ -46,7 +47,7 @@ if %ERRORLEVEL% EQU 0 (
     echo Pastikan:
     echo  1. WSA sudah dalam kondisi AKTIF (dibuka).
     echo  2. Developer Mode (Mode Pengembang) di Settings WSA sudah diaktifkan (ON).
-    echo  3. IP & Port ADB sesuai (default: 127.0.0.1:58526).
+    echo  3. IP dan Port ADB sesuai (default: 127.0.0.1:58526).
     echo ========================================================================
 )
 
