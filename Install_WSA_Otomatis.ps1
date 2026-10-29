@@ -169,6 +169,9 @@ Write-Host "[5/6] Memasang Aplikasi SPC Smart Living (Multi-Split)..." -Foregrou
 
 $splitsDir = "$PSScriptRoot\xapk_splits"
 $baseApk = "$splitsDir\base.apk"
+if (-not (Test-Path $baseApk)) {
+    $baseApk = "$splitsDir\com.spc.smartliving.apk"
+}
 $armApk  = "$splitsDir\config.arm64_v8a.apk"
 $mdpiApk = "$splitsDir\config.mdpi.apk"
 $enApk   = "$splitsDir\config.en.apk"
@@ -197,3 +200,4 @@ Write-Host " Anda dapat membuka 'SPC Smart Living' langsung dari Start Menu Wind
 Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host ""
 pause
+

@@ -19,8 +19,11 @@ echo [1/3] Memeriksa status koneksi ke WSA (Port 58526)...
 
 echo.
 echo [2/3] Memeriksa paket split APK...
-if not exist "%~dp0xapk_splits\base.apk" (
-    echo [ERROR] File base.apk tidak ditemukan di folder xapk_splits!
+set BASE_APK="%~dp0xapk_splits\base.apk"
+if not exist %BASE_APK% set BASE_APK="%~dp0xapk_splits\com.spc.smartliving.apk"
+
+if not exist %BASE_APK% (
+    echo [ERROR] File APK utama (base.apk / com.spc.smartliving.apk) tidak ditemukan di folder xapk_splits!
     echo Silakan periksa kembali folder repositori.
     pause
     exit /b 1
@@ -28,7 +31,7 @@ if not exist "%~dp0xapk_splits\base.apk" (
 
 echo.
 echo [3/3] Memasang seluruh split APK secara serentak (ARM64 + Density + Language)...
-%ADB% install-multiple -r "%~dp0xapk_splits\base.apk" "%~dp0xapk_splits\config.arm64_v8a.apk" "%~dp0xapk_splits\config.mdpi.apk" "%~dp0xapk_splits\config.en.apk"
+%ADB% install-multiple -r %BASE_APK% "%~dp0xapk_splits\config.arm64_v8a.apk" "%~dp0xapk_splits\config.mdpi.apk" "%~dp0xapk_splits\config.en.apk"
 
 if %ERRORLEVEL% EQU 0 (
     echo.

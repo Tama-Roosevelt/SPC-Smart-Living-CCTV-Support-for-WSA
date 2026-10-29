@@ -8,3 +8,4 @@ echo.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Install_WSA_Otomatis.ps1"
 
 pause
+
